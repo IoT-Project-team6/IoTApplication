@@ -10,10 +10,17 @@ import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,19 +31,32 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
-    private static final int REQUEST_ENABLE_BT = 1;
-    private static final int REQUEST_FINE_LOCATION = 2;
+    // 강의실 bluetooth 기기 mac 주소
     private static final String TARGET_MAC_ADDRESS = "00:04:3E:9A:B9:BB";
+
+    // bluetooth 측정 센서 setting
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
+
+    // 걸음 수 측정 센서 setting
+    private SensorManager sensorManager;
+    private Sensor stepCountSensor;
+
     private Handler handler = new Handler(Looper.getMainLooper());
     private ActivityResultLauncher<Intent> enableBluetoothLauncher;
     private TextView distanceTextView;
+    private Button startButton;
+    private Button resetButton;
+    private Button submitButton;
+    private TextView currentStepTextView;
     private String distances = "";
+    int currentSteps = 0;
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -44,8 +64,47 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        distanceTextView = findViewById(R.id.activity_main_distance_text);
+        setViews();
+//        checkAllPermission();
+        setBluetoothSensors();
+        setPedometerSensors();
+    }
 
+    private void checkAllPermission() {
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Toast.makeText(this, "Bluetooth LE를 지원하지 않는 기기입니다.", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+
+        String[] permissions = new String[] {
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACTIVITY_RECOGNITION
+
+        };
+        List<String> needPermissions = new ArrayList<>(Arrays.asList(permissions));
+
+        for (int i = 0; i < permissions.length; i++) {
+            String currentPermission = permissions[i];
+            int checkPermission = ContextCompat.checkSelfPermission(this, currentPermission);
+
+            if (checkPermission == PackageManager.PERMISSION_DENIED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, currentPermission)) {
+                    needPermissions.add(currentPermission);
+                }
+            }
+        }
+
+        String[] targets = new String[needPermissions.size()];
+        needPermissions.toArray(targets);
+
+        ActivityCompat.requestPermissions(this, targets, 101);
+    }
+
+    private void setBluetoothSensors() {
         // Bluetooth 지원 확인
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, "Bluetooth LE를 지원하지 않는 기기입니다.", Toast.LENGTH_SHORT).show();
@@ -56,12 +115,11 @@ public class MainActivity extends AppCompatActivity {
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
 
-        // Bluetooth 활성화 확인
         enableBluetoothLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK) {
-                        checkLocationPermission();
+                        checkAllPermission();
                     } else {
                         Toast.makeText(this, "Bluetooth를 활성화해야 합니다.", Toast.LENGTH_SHORT).show();
                         finish();
@@ -72,22 +130,7 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             enableBluetoothLauncher.launch(enableBtIntent);
         } else {
-            checkLocationPermission();
-        }
-    }
-
-    private void checkLocationPermission() {
-        // Android 6.0 이상에서는 위치 권한 확인 필요
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
-                        REQUEST_FINE_LOCATION);
-            } else {
-                startBluetoothScan();
-            }
-        } else {
-            startBluetoothScan();
+            checkAllPermission();
         }
     }
 
@@ -143,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     requestPermissions(
                             new String[]{
+                                    Manifest.permission.BLUETOOTH_SCAN,
                                     Manifest.permission.BLUETOOTH_CONNECT
                             },
                             2);
@@ -210,12 +254,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_FINE_LOCATION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startBluetoothScan();
-            } else {
-                Toast.makeText(this, "위치 권한이 필요합니다.", Toast.LENGTH_SHORT).show();
-                finish();
+        if (requestCode != 0) {
+            for (int i = 0; i < grantResults.length; i++) {
+                if (grantResults.length > 0 && grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "권한 설정이 필요합니다.", Toast.LENGTH_SHORT).show();
+                    break;
+                }
             }
         }
     }
@@ -224,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (bluetoothLeScanner != null) {
-            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(MainActivity.this, "Bluetooth 스캔에 권한이 없습니다.", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -232,4 +276,109 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // 이하 걸음 측정 로직
+    private void setViews() {
+        distanceTextView = findViewById(R.id.activity_main_distance_text);
+        startButton = findViewById(R.id.activity_main_startButton);
+        resetButton = findViewById(R.id.activity_main_reset_button);
+        submitButton = findViewById(R.id.activity_main_submit_button);
+        currentStepTextView = findViewById(R.id.activity_main_current_step_text_view);
+
+        setSubmitButtonListener();
+        setStartButtonListener();
+        setResetButtonListener();
+        submitButton.setEnabled(false);
+    }
+
+    private void setSubmitButtonListener() {
+        submitButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startBluetoothScan();
+            }
+        });
+    }
+
+    private void setStartButtonListener() {
+        startButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                reverseResetAndSubmitButtonStatus();
+                if (startButton.getText().equals("START")) {
+                    startPedometer();
+                    startButton.setText("STOP");
+                }
+                else {
+                    stopPedometer();
+                    startButton.setText("START");
+                }
+
+            }
+        });
+    }
+
+    private void reverseResetAndSubmitButtonStatus() {
+        if (resetButton.isEnabled()) {
+            resetButton.setEnabled(false);
+            submitButton.setEnabled(false);
+        }
+        else {
+            resetButton.setEnabled(true);
+            submitButton.setEnabled(true);
+        }
+    }
+
+    private void setResetButtonListener() {
+        resetButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                currentSteps = 0;
+                currentStepTextView.setText(String.valueOf(currentSteps));
+            }
+        });
+    }
+
+    private void setPedometerSensors() {
+        if(ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED){
+
+            requestPermissions(new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, 2);
+        }
+
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        stepCountSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+    }
+    private void startPedometer() {
+        if(stepCountSensor !=null) {
+            // 센서 속도 설정
+            // * 옵션
+            // - SENSOR_DELAY_NORMAL: 20,000 초 딜레이
+            // - SENSOR_DELAY_UI: 6,000 초 딜레이
+            // - SENSOR_DELAY_GAME: 20,000 초 딜레이
+            // - SENSOR_DELAY_FASTEST: 딜레이 없음
+            //
+            sensorManager.registerListener(this,stepCountSensor,SensorManager.SENSOR_DELAY_FASTEST);
+        }
+    }
+
+    private void stopPedometer() {
+        sensorManager.unregisterListener(this);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        if(sensorEvent.sensor.getType() == Sensor.TYPE_STEP_DETECTOR){
+
+            if(sensorEvent.values[0]==1.0f){
+                // 센서 이벤트가 발생할때 마다 걸음수 증가
+                currentSteps++;
+                currentStepTextView.setText(String.valueOf(currentSteps));
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
 }

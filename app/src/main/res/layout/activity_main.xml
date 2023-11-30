@@ -7,13 +7,74 @@
 
     <TextView
         android:id="@+id/activity_main_distance_text"
-        android:layout_width="57dp"
-        android:layout_height="20dp"
-        android:text="TextView"
+        android:layout_width="180dp"
+        android:layout_height="60dp"
+        android:gravity="center"
+        android:text="현재 위치는?"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.476"
+        app:layout_constraintTop_toBottomOf="@+id/activity_main_startButton"
+        app:layout_constraintVertical_bias="0.537"
         tools:ignore="MissingConstraints" />
+
+    <EditText
+        android:id="@+id/activity_main_title_edit_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:ems="10"
+        android:inputType="text"
+        android:text="자리 찾기"
+        android:gravity="center"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/activity_main_startButton"
+        android:layout_width="200dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="56dp"
+        android:text="START"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/activity_main_title_edit_text" />
+
+    <Button
+        android:id="@+id/activity_main_reset_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:text="RESET"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.256"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/activity_main_current_step_text_view" />
+
+    <TextView
+        android:id="@+id/activity_main_current_step_text_view"
+        android:layout_width="100dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="44dp"
+        android:gravity="center"
+        android:text="0"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/activity_main_startButton" />
+
+    <Button
+        android:id="@+id/activity_main_submit_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:text="SUBMIT"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.503"
+        app:layout_constraintStart_toEndOf="@+id/activity_main_reset_button"
+        app:layout_constraintTop_toBottomOf="@+id/activity_main_current_step_text_view" />
 </androidx.constraintlayout.widget.ConstraintLayout>
