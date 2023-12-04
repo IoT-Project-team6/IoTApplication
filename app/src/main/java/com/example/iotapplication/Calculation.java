@@ -1,7 +1,9 @@
-package com.example.iotapplication;
-
-public class Calculation {
-
-
-
-}
+//package com.example.iotapplication;
+//
+//import java.util.List;
+//
+//public class Calculation {
+//
+//    private
+//
+//}

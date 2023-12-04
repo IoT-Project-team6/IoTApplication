@@ -13,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
+import android.hardware.SensorListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -37,6 +38,9 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
+    // 320 이상, 55 이하 일때 이동은 세로 이동으로 판단
+    // 150 이상, 320 이하 일때 이동은 가로 이동으로 판단
+
     // 강의실 bluetooth 기기 mac 주소
     private static final String TARGET_MAC_ADDRESS = "00:04:3E:9A:B9:BB";
 
@@ -55,8 +59,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button resetButton;
     private Button submitButton;
     private TextView currentStepTextView;
+    private TextView currentTransversTextView;
+    private TextView currentLengthTextView;
+    private TextView currentAzimuthTextView;
     private String distances = "";
     int currentSteps = 0;
+    int currentTransverseStep = 0;
+    int currentLengthStep = 0;
+    private DirectionSensor directionListener;
+    private SensorManager directionSensorManager;
+    private float currentAzimuth;
+    private List<Double> dis = new ArrayList<>();
+
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -64,10 +78,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        directionListener = new DirectionSensor();
+        startDirectionSensor();
         setViews();
 //        checkAllPermission();
         setBluetoothSensors();
         setPedometerSensors();
+    }
+
+    private void startDirectionSensor() {
+        directionSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+        Sensor sensor1 = directionSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        Sensor sensor2 = directionSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
+        directionSensorManager.registerListener(directionListener, sensor1, SensorManager.SENSOR_DELAY_UI);
+        directionSensorManager.registerListener(directionListener, sensor2, SensorManager.SENSOR_DELAY_UI);
     }
 
     private void checkAllPermission() {
@@ -83,7 +109,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
                 Manifest.permission.ACTIVITY_RECOGNITION
-
         };
         List<String> needPermissions = new ArrayList<>(Arrays.asList(permissions));
 
@@ -172,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 bluetoothLeScanner.stopScan(scanCallback);
             }
-        }, 10000); // 10초 동안 스캔
+        }, 20000); // 10초 동안 스캔
     }
 
     private ScanCallback scanCallback = new ScanCallback() {
@@ -197,10 +222,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
             }
 
-            if (result.getDevice().getAddress() == TARGET_MAC_ADDRESS) {
-                String info = result.getDevice().getName() + " / " + result.getDevice().getAddress() + " / " + String.format("거리: %.2f 미터", distance);
-                distances = distances + info + "\n";
-                distanceTextView.setText(distances);
+            if (result.getDevice().getAddress().equals(TARGET_MAC_ADDRESS)) {
+//                String info = result.getDevice().getName() + " / " + result.getDevice().getAddress() + " / " + String.format("거리: %.2f 미터", distance);
+//                distances = distances + info + "\n";
+//                Log.d("hi", distances);
+
+                dis.add(distance);
+                Log.d("hi", distance + "");
+//                distanceTextView.setText(distances);
+            }
+
+            if (dis.size() >= 7) {
+                Double sum = 0.0;
+                for (Double d : dis) {
+                    sum += d;
+                }
+
+                sum = sum / 7;
+
+                distanceTextView.setText(sum.toString());
+                bluetoothLeScanner.stopScan(scanCallback);
             }
 
 //            if (result.getDevice().getName() != null) {
@@ -232,7 +273,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private double calculateDistance(int rssi) {
         // RSSI를 사용하여 거리를 추정하는 방법은 여러가지가 있습니다.
         // 여기서는 간단한 모델을 사용하며, 상황에 따라 더 정교한 모델을 사용할 수 있습니다.
-        int txPower = -80; // 비콘과 스마트폰 간의 거리가 1 미터일 때의 RSSI 값
+        int txPower = -56; // 비콘과 스마트폰 간의 거리가 1 미터일 때의 RSSI 값
         double ratio = rssi * 1.0 / txPower;
         if (ratio < 1.0) {
             return Math.pow(ratio, 10);
@@ -283,6 +324,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         resetButton = findViewById(R.id.activity_main_reset_button);
         submitButton = findViewById(R.id.activity_main_submit_button);
         currentStepTextView = findViewById(R.id.activity_main_current_step_text_view);
+        currentTransversTextView = findViewById(R.id.activity_main_current_transverse_step_text_view);
+        currentLengthTextView = findViewById(R.id.activity_main_current_length_step_text_view);
+        currentAzimuthTextView = findViewById(R.id.activity_main_current_azimuth);
 
         setSubmitButtonListener();
         setStartButtonListener();
@@ -372,7 +416,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if(sensorEvent.values[0]==1.0f){
                 // 센서 이벤트가 발생할때 마다 걸음수 증가
                 currentSteps++;
+
+                if (150 <= currentAzimuth && currentAzimuth < 320) {
+                    currentTransverseStep++;
+                }
+                else if ((320 <= currentAzimuth && currentAzimuth <= 360) || (0 <= currentAzimuth && currentAzimuth <= 55)) {
+                    currentLengthStep++;
+                }
+
                 currentStepTextView.setText(String.valueOf(currentSteps));
+                currentTransversTextView.setText(String.valueOf(currentTransverseStep));
+                currentLengthTextView.setText(String.valueOf(currentLengthStep));
             }
         }
     }
@@ -380,5 +434,60 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
 
+    }
+
+    public class DirectionSensor implements SensorEventListener {
+
+        float[] accValue = new float[3];
+        float[] magValue = new float[3];
+
+        boolean isGetAcc = false;
+        boolean isGetMag = false;
+
+        @Override
+        public void onSensorChanged(SensorEvent sensorEvent) {
+            int type = sensorEvent.sensor.getType();
+
+            switch (type) {
+                case Sensor.TYPE_ACCELEROMETER:
+                    System.arraycopy(sensorEvent.values, 0, accValue, 0, sensorEvent.values.length);
+                    isGetAcc = true;
+                    break;
+                case Sensor.TYPE_MAGNETIC_FIELD:
+                    System.arraycopy(sensorEvent.values, 0, magValue, 0, sensorEvent.values.length);
+                    isGetMag = true;
+                    break;
+            }
+
+            if (isGetAcc == true && isGetMag == true) {
+                float[] R = new float[9];
+                float[] I = new float[9];
+
+                SensorManager.getRotationMatrix(R, I, accValue, magValue);
+                float[] values = new float[3];
+                SensorManager.getOrientation(R, values);
+
+                float azimuth = (float) Math.toDegrees(values[0]);
+                float pitch = (float) Math.toDegrees(values[1]);
+                float roll = (float) Math.toDegrees(values[2]);
+
+                if (azimuth < 0) {
+                    azimuth += 360;
+                }
+
+                currentAzimuth = azimuth;
+                currentAzimuthTextView.setText(String.valueOf(currentAzimuth));
+//                Log.d("hi", (currentAzimuth) + ""); // 97~265
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int i) {
+
+        }
+
+        public float getCurrentAzimuth() {
+            return currentAzimuth;
+        }
     }
 }
