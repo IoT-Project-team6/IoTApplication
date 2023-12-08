@@ -62,6 +62,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView currentTransversTextView;
     private TextView currentLengthTextView;
     private TextView currentAzimuthTextView;
+    private TextView locationTextView;
     private String distances = "";
     int currentSteps = 0;
     int currentTransverseStep = 0;
@@ -70,6 +71,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager directionSensorManager;
     private float currentAzimuth;
     private List<Double> dis = new ArrayList<>();
+    private Button resultButton;
+    private boolean flag = false;
 
 
     @SuppressLint("MissingInflatedId")
@@ -242,6 +245,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 distanceTextView.setText(sum.toString());
                 bluetoothLeScanner.stopScan(scanCallback);
+                Calculation calculation = new Calculation();
+                String location = calculation.calculateLocation(distance, currentTransverseStep, currentLengthStep);
+                locationTextView.setText(location);
             }
 
 //            if (result.getDevice().getName() != null) {
@@ -273,7 +279,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private double calculateDistance(int rssi) {
         // RSSI를 사용하여 거리를 추정하는 방법은 여러가지가 있습니다.
         // 여기서는 간단한 모델을 사용하며, 상황에 따라 더 정교한 모델을 사용할 수 있습니다.
-        int txPower = -56; // 비콘과 스마트폰 간의 거리가 1 미터일 때의 RSSI 값
+        int txPower = -53; // 비콘과 스마트폰 간의 거리가 1 미터일 때의 RSSI 값
         double ratio = rssi * 1.0 / txPower;
         if (ratio < 1.0) {
             return Math.pow(ratio, 10);
@@ -284,7 +290,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 //    private double calculateDistance(int rssi) {
 //        // 튜닝 가능한 파라미터
-//        int txPower = -80; // 비콘과 스마트폰 간의 거리가 1 미터일 때의 RSSI 값
+//        int txPower = -50; // 비콘과 스마트폰 간의 거리가 1 미터일 때의 RSSI 값
+////        Log.d("hi", txPower + "");
 //        double pathLossExponent = 2.0; // 경로 손실 지수
 //        double referenceDistance = 1.0; // 참조 거리 (1 미터)
 //
@@ -327,17 +334,32 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         currentTransversTextView = findViewById(R.id.activity_main_current_transverse_step_text_view);
         currentLengthTextView = findViewById(R.id.activity_main_current_length_step_text_view);
         currentAzimuthTextView = findViewById(R.id.activity_main_current_azimuth);
+        resultButton = findViewById(R.id.activity_main_result_button);
+        locationTextView = findViewById(R.id.activity_main_location_text_view);
 
         setSubmitButtonListener();
         setStartButtonListener();
         setResetButtonListener();
+        setResultButtonListener();
+
         submitButton.setEnabled(false);
+        resetButton.setEnabled(false);
+    }
+
+    private void setResultButtonListener() {
+        resultButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // 계산 시
+            }
+        });
     }
 
     private void setSubmitButtonListener() {
         submitButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                resetButton.setEnabled(true);
                 startBluetoothScan();
             }
         });
@@ -418,10 +440,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 currentSteps++;
 
                 if (150 <= currentAzimuth && currentAzimuth < 320) {
-                    currentTransverseStep++;
+                    if (!flag) {
+                        currentTransverseStep++;
+                    }
                 }
                 else if ((320 <= currentAzimuth && currentAzimuth <= 360) || (0 <= currentAzimuth && currentAzimuth <= 55)) {
                     currentLengthStep++;
+                }
+
+                if (currentLengthStep > 0) {
+                    flag = true;
                 }
 
                 currentStepTextView.setText(String.valueOf(currentSteps));

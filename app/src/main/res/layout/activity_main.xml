@@ -10,13 +10,13 @@
         android:layout_width="180dp"
         android:layout_height="60dp"
         android:gravity="center"
-        android:text="현재 위치는?"
+        android:text="현재 거리"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/activity_main_startButton"
-        app:layout_constraintVertical_bias="0.537"
+        app:layout_constraintVertical_bias="0.754"
         tools:ignore="MissingConstraints" />
 
     <EditText
@@ -110,4 +110,26 @@
         app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/activity_main_title_edit_text" />
+
+    <Button
+        android:id="@+id/activity_main_result_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="252dp"
+        android:text="위치 결과 계산"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/activity_main_startButton" />
+
+    <TextView
+        android:id="@+id/activity_main_location_text_view"
+        android:layout_width="100dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="436dp"
+        android:gravity="center"
+        android:text="현재 위치는?"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/activity_main_startButton" />
 </androidx.constraintlayout.widget.ConstraintLayout>
