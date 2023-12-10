@@ -39,7 +39,8 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     // 320 이상, 55 이하 일때 이동은 세로 이동으로 판단
-    // 150 이상, 320 이하 일때 이동은 가로 이동으로 판단
+    // 225 이상, 320 이하 오른쪽 이동 판단
+    // 55 이상 145 이하 왼쪽 이동 판단
 
     // 강의실 bluetooth 기기 mac 주소
     private static final String TARGET_MAC_ADDRESS = "00:04:3E:9A:B9:BB";
@@ -73,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private List<Double> dis = new ArrayList<>();
     private Button resultButton;
     private boolean flag = false;
+    private double lastDirection = 0.0;
 
 
     @SuppressLint("MissingInflatedId")
@@ -235,7 +237,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //                distanceTextView.setText(distances);
             }
 
-            if (dis.size() >= 7) {
+            if (dis.size() == 7) {
                 Double sum = 0.0;
                 for (Double d : dis) {
                     sum += d;
@@ -246,7 +248,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 distanceTextView.setText(sum.toString());
                 bluetoothLeScanner.stopScan(scanCallback);
                 Calculation calculation = new Calculation();
-                String location = calculation.calculateLocation(distance, currentTransverseStep, currentLengthStep);
+                String location = calculation.calculateLocation(distance, currentTransverseStep, currentLengthStep, lastDirection);
                 locationTextView.setText(location);
             }
 
@@ -439,7 +441,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 // 센서 이벤트가 발생할때 마다 걸음수 증가
                 currentSteps++;
 
-                if (150 <= currentAzimuth && currentAzimuth < 320) {
+                // 320 이상, 55 이하 일때 이동은 세로 이동으로 판단
+                // 225 이상, 320 이하 오른쪽 이동 판단
+                // 55 이상 145 이하 왼쪽 이동 판단
+                if (225 <= currentAzimuth && currentAzimuth < 320) {
                     if (!flag) {
                         currentTransverseStep++;
                     }
@@ -505,6 +510,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 currentAzimuth = azimuth;
                 currentAzimuthTextView.setText(String.valueOf(currentAzimuth));
+                lastDirection = currentAzimuth;
 //                Log.d("hi", (currentAzimuth) + ""); // 97~265
             }
         }

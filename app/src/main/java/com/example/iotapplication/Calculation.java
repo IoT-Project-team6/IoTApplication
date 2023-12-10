@@ -1,7 +1,10 @@
 package com.example.iotapplication;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /*
 
@@ -27,47 +30,85 @@ import java.util.List;
 
 public class Calculation {
 
-
-
     private String[][] classMap = new String[][] {
-            {"1-1-10", null, null},
-            {"1-2-8.5", "2-1-5.5", "3-1-8.5"},
-            {"1-3-7", "2-2-4", "3-2-7"},
-            {"4-1-5.5", "5-1-2.5", "6-1-5.5"},
-            {"4-2-4", "5-2-1.5", "6-2-4"},
-            {"4-3-5.5", "5-3-2.5", "6-3-5.5"},
-            {"7-1-7", "8-1-4", "9-1-7"},
-            {null, "8-2-5.5", "9-2-8.5"},
-            {null, "8-3-7", "9-3-10"},
+            {"1-1-6.39", null, null},
+            {"1-2-7.74", "2-1-5.39", "3-1-11.31"},
+            {"1-3-3.17", "2-2-4.80", "3-2-6.53"},
+            {"4-1-10.39", "5-1-2.86", "6-1-3.63"},
+            {"4-2-4.61", "5-2-0.37", "6-2-6.30"},
+            {"4-3-3.88", "5-3-0.89", "6-3-4.02"},
+            {"7-1-3.97", "8-1-3.52", "9-1-7.84"},
+            {null, "8-2-4.95", "9-2-8.47"},
+            {null, "8-3-7.88", "9-3-3.40"},
     };
 
-    public String calculateLocation(final double distance, final int transverseStep, final int lengthStep) {
+    public String calculateLocation(final double distance, final int transverseStep, final int lengthStep, final double direction) {
         int resultZone = -1;
         int resultTable = -1;
         double diff = 99999999;
         int left = 0;
         int right = 1;
-        int up = 0;
-        int down = 0;
+        int line1 = 0;
+        int line2 = 0;
+        int line3 = 0;
 
-        if (transverseStep > 5) {
+        if (transverseStep > 7) {
             left = 1;
             right = 2;
         }
 
-        if (lengthStep > 6 && lengthStep <= 12) {
-            up = 0;
-            down = 1;
-        } else if (lengthStep > 12 && lengthStep <= 18) {
-            up = 1;
-            down = 2;
-        } else {
-            up = 2;
-            down = 2;
+        if (lengthStep > 0 && lengthStep <= 2) {
+            line1 = 0;
+            line2 = 1;
+            line3 = 1;
+        } else if (lengthStep > 2 && lengthStep <= 4) {
+            line1 = 0;
+            line2 = 1;
+            line3 = 2;
+        } else if (lengthStep > 4 && lengthStep <= 6) {
+            line1 = 1;
+            line2 = 2;
+            line3 = 3;
+        } else if (lengthStep > 6 && lengthStep <= 8) {
+            line1 = 2;
+            line2 = 3;
+            line3 = 4;
+        } else if (lengthStep > 8 && lengthStep <= 10) {
+            line1 = 3;
+            line2 = 4;
+            line3 = 5;
+        } else if (lengthStep > 10 && lengthStep <= 12) {
+            line1 = 4;
+            line2 = 5;
+            line3 = 6;
+        } else if (lengthStep > 12 && lengthStep <= 14) {
+            line1 = 5;
+            line2 = 6;
+            line3 = 7;
+        } else if (lengthStep > 14 && lengthStep <= 16) {
+            line1 = 6;
+            line2 = 7;
+            line3 = 8;
+        } else if (lengthStep > 16){
+            line1 = 7;
+            line2 = 8;
+            line3 = 8;
         }
 
+
+        // 320 이상, 55 이하 일때 이동은 세로 이동으로 판단
+        // 225 이상, 320 이하 오른쪽 이동 판단
+        // 55 이상 145 이하 왼쪽 이동 판단
+        if (direction >= 55 && direction <= 145) {
+            right = left;
+        } else if (direction >= 225 && direction <= 320) {
+            left = right;
+        }
+
+        Log.d("hi", "lastDirection = " + direction + "");
+
         int[] widthCandidates = new int[] {left, right};
-        int[] lengthCandidates = new int[] {up, down};
+        int[] lengthCandidates = new int[] {line1, line2, line3};
 
         for (int i = 0; i < lengthCandidates.length; i++) {
             int length = lengthCandidates[i];
@@ -91,5 +132,4 @@ public class Calculation {
 
         return resultZone + "-" + resultTable;
     }
-
 }

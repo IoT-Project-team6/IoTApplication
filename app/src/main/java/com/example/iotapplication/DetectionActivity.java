@@ -195,10 +195,13 @@ public class DetectionActivity extends AppCompatActivity {
             }
 
             if (result.getDevice().getAddress().equals(TARGET_MAC_ADDRESS)) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    lastDetectionTime = ZonedDateTime.now();
+                }
                 nextActivityButton.setEnabled(true);
             }
             else {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     ZonedDateTime currentTime = ZonedDateTime.now();
 
                     if (currentTime.isAfter(lastDetectionTime.plusSeconds(5))) {
